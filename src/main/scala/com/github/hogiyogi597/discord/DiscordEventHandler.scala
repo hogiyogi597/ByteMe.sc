@@ -1,50 +1,54 @@
 package com.github.hogiyogi597.discord
 
-import cats.data.EitherK
-import cats.effect.IO
-import cats.free.Free
-import cats.implicits._
-import cats.~>
-import dissonance.DiscordClient
-import dissonance.data.events.MessageCreate
-import dissonance.data.{BasicMessage, Event, Snowflake, User}
+import cats.Monad
+import cats.syntax.all._
 import com.github.hogiyogi597.models._
-import com.github.hogiyogi597.yarn.{JsoupBrowserInterpreter, Yarn}
-import com.github.hogiyogi597.Programs._
-import com.github.hogiyogi597.persistence.{LocalUserInteractionStateStoreInterpreter, UserInteractionStore}
+import com.github.hogiyogi597.persistence.{UserInteractionStore, UserSearchState}
+import com.github.hogiyogi597.yarn.Yarn
+import dissonance.data.{Snowflake, User}
 
-class DiscordEventHandler(discordClient: DiscordClient) {
-  type Eff1[A] = EitherK[MessageParser, UserInteractionStore, A]
-  type Eff0[A] = EitherK[DiscordInteraction, Eff1, A]
-  type Eff[A]  = EitherK[Yarn, Eff0, A]
-  val temp = LocalUserInteractionStateStoreInterpreter.make[IO].unsafeRunSync() // TODO: fix this
-  private val interpreter: Eff ~> IO =
-    JsoupBrowserInterpreter.interpreter[IO] or (DiscordClientInterpreter.interpreter(discordClient) or (AttoInterpreter.interpreter[IO] or temp.interpreter))
-
-  def handleEvent: Event => IO[Unit] = {
-    case MessageCreate(BasicMessage(_, content, user, channelId)) if !isBotUser(user) =>
-      parseAndHandleCommand[Eff](channelId, user, content).foldMap(interpreter)
-    case _ =>
-      IO.unit
-  }
-
-  def parseAndHandleCommand[S[_]: Yarn.Ops: DiscordInteraction.Ops: UserInteractionStore.Ops](
-      channelId: Snowflake,
-      user: User,
-      rawInputMessage: String
-  )(implicit parser: MessageParser.Ops[S]): Free[S, Unit] = {
+class DiscordEventHandler[F[_]: Monad: Yarn: DiscordInteraction: UserInteractionStore: MessageParser] {
+  def parseAndHandleCommand(channelId: Snowflake, user: User, rawInputMessage: String): F[Unit] = {
     for {
-      parsedCommand <- parser.parseMessage(rawInputMessage)
+      parsedCommand <- MessageParser[F].parseMessage(rawInputMessage)
       _ <- parsedCommand.traverse {
-             case HelpCommand()                             => ???
-             case RandomSearchCommand()                     => getRandom(channelId)
-             case SingleSearchCommand(searchPhrase)         => getFromSearchString(channelId, searchPhrase)
-             case MultiSearchCommand(searchPhrase)          => getMultiSearchResults(channelId, user, searchPhrase)
-             case CompleteMultiSearchCommand(selectedIndex) => completeMultiSearchCommand(channelId, user.id.value, selectedIndex)
-             case CancelMultiSearchCommand()                => cancelMultiSearchCommand(user.id.value)
+             case HelpCommand() => DiscordInteraction[F].sendMessage(channelId, "help message")
+             case RandomSearchCommand() =>
+               for {
+                 yarnResult <- Yarn[F].getPopular
+                 _          <- yarnResult.traverse(result => DiscordInteraction[F].sendMessage(channelId, result.url.renderString))
+               } yield ()
+             case SingleSearchCommand(searchPhrase) =>
+               for {
+                 yarnResult <- Yarn[F].searchTerm(searchPhrase)
+                 _          <- yarnResult.traverse(result => DiscordInteraction[F].sendMessage(channelId, result.url.renderString))
+               } yield ()
+             case MultiSearchCommand(searchPhrase) =>
+               for {
+                 yarnResults            <- Yarn[F].multiSearchTerm(searchPhrase)
+                 discordEmbeddedMessages = yarnResults.zip(LazyList.from(1)).map { case (yarnResult, index) => createEmbeddedMessage(yarnResult, index) }
+                 (webhook, message)     <- DiscordInteraction[F].sendEmbeddedMessage(channelId, user, discordEmbeddedMessages)
+                 _                      <- UserInteractionStore[F].startUserSearch(user.id.value, UserSearchState(yarnResults, webhook.id, message.id))
+               } yield ()
+             case CompleteMultiSearchCommand(selectedIndex) =>
+               for {
+                 maybeUserSearchState <- UserInteractionStore[F].completeUserSearch(user.id.value)
+                 maybeYarnResult = maybeUserSearchState.flatMap { case UserSearchState(yarnResults, webhookId, messageId) =>
+                                     yarnResults.get(selectedIndex - 1L).map(yarnResult => (yarnResult, webhookId, messageId))
+                                   }
+                 _ <- maybeYarnResult.traverse { case (yarnResult, _, messageId) =>
+                        DiscordInteraction[F].sendMessage(channelId, yarnResult.url.renderString) *>
+                          DiscordInteraction[F].deleteMessage(channelId, messageId)
+                      }
+               } yield ()
+             case CancelMultiSearchCommand() =>
+               for {
+                 maybeUserSearchState <- UserInteractionStore[F].cancelUserSearch(user.id.value)
+                 _ <- maybeUserSearchState.traverse { case UserSearchState(_, _, messageId) =>
+                        DiscordInteraction[F].deleteMessage(channelId, messageId)
+                      }
+               } yield ()
            }
     } yield ()
   }
-
-  private def isBotUser(user: User) = user.bot.getOrElse(false)
 }

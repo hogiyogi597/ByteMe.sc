@@ -1,7 +1,7 @@
 package com.github.hogiyogi597.yarn
 
-import org.http4s.Uri
 import com.github.hogiyogi597.yarn.YarnResult._
+import org.http4s.Uri
 
 case class YarnResult(url: Uri, gif: Uri, title: Title, transcript: Transcript, duration: Duration)
 
