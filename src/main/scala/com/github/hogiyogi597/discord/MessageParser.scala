@@ -3,6 +3,8 @@ package com.github.hogiyogi597.discord
 import atto.Atto.{stringCI, takeText, token, _}
 import atto.Parser
 import cats.Applicative
+import com.github.hogiyogi597.models.ParsedCommand
+import com.github.hogiyogi597.models.ParsedCommand._
 import com.github.hogiyogi597.models._
 
 trait MessageParser[F[_]] {
@@ -14,9 +16,7 @@ object MessageParser {
 }
 
 class AttoInterpreter[F[_]: Applicative] extends MessageParser[F] {
-  private val command = "/byteme"
-
-  private val botCommandParser    = token(stringCI(command))
+  private val botCommandParser    = token(stringCI(commandPrefix))
   private val simpleCommandParser = botCommandParser ~> token(takeText)
 
   private val randomSearchParser        = simpleCommandParser.filter(_.isEmpty).map(_ => RandomSearchCommand())

@@ -11,7 +11,7 @@ import dissonance.data._
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
-    val discordToken = args(0)
+    val discordToken = args.head
 
     (Discord.make(discordToken), Resource.eval(LocalUserSearchStoreKVS.make[IO])).tupled
       .use { case (discord, kvs) =>

@@ -2,7 +2,7 @@ package com.github.hogiyogi597.discord
 
 import cats.Monad
 import cats.syntax.all._
-import com.github.hogiyogi597.models._
+import com.github.hogiyogi597.models.ParsedCommand._
 import com.github.hogiyogi597.persistence.{UserInteractionStore, UserSearchState}
 import com.github.hogiyogi597.yarn.Yarn
 import dissonance.data.{Snowflake, User}
@@ -12,7 +12,7 @@ class DiscordEventHandler[F[_]: Monad: Yarn: DiscordInteraction: UserInteraction
     for {
       parsedCommand <- MessageParser[F].parseMessage(rawInputMessage)
       _ <- parsedCommand.traverse {
-             case HelpCommand() => DiscordInteraction[F].sendMessage(channelId, "help message")
+             case HelpCommand() => DiscordInteraction[F].sendMessage(channelId, helpMessage)
              case RandomSearchCommand() =>
                for {
                  yarnResult <- Yarn[F].getPopular
