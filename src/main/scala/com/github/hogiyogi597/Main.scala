@@ -25,16 +25,18 @@ object Main extends IOApp {
 
         discord
           .subscribe(Shard.singleton, Intent.GuildMessages)
-          .evalMap {
-            case MessageCreate(BasicMessage(_, content, user, channelId)) if !isBotUser(user) =>
-              eventHandler.parseAndHandleCommand(channelId, user, content)
-            case _ =>
-              IO.unit
-          }
+          .mapAsyncUnordered(Int.MaxValue)(handleEvents(eventHandler))
           .compile
           .drain
       }
       .as(ExitCode.Success)
+  }
+
+  private def handleEvents(discordEventHandler: DiscordEventHandler[IO]): Event => IO[Unit] = {
+    case MessageCreate(BasicMessage(_, content, user, channelId)) if !isBotUser(user) =>
+      discordEventHandler.parseAndHandleCommand(channelId, user, content)
+    case _ =>
+      IO.unit
   }
 
   private def isBotUser(user: User) = user.bot.getOrElse(false)
