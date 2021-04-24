@@ -2,12 +2,12 @@ package com.github.hogiyogi597
 
 import cats.effect._
 import cats.syntax.all._
-import com.github.hogiyogi597.discord.{AttoInterpreter, DiscordClientInterpreter, DiscordEventHandler, DiscordInteraction, MessageParser}
+import com.github.hogiyogi597.discord.{DiscordClientInterpreter, DiscordEventHandler, DiscordInteraction}
 import com.github.hogiyogi597.persistence.{KVS, LocalUserSearchStoreKVS, UserInteractionStore, UserInteractionStoreInterpreter}
 import com.github.hogiyogi597.yarn.{JsoupBrowserInterpreter, JsoupYarnParserInterpreter, Yarn, YarnParser}
 import dissonance.Discord
-import dissonance.data.events.MessageCreate
 import dissonance.data._
+import dissonance.data.events.MessageCreate
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
@@ -18,7 +18,6 @@ object Main extends IOApp {
         implicit val ioKvs: KVS[IO]                                 = kvs
         implicit val yarnParser: YarnParser[IO]                     = new JsoupYarnParserInterpreter[IO]
         implicit val yarn: Yarn[IO]                                 = new JsoupBrowserInterpreter[IO]
-        implicit val messageParser: MessageParser[IO]               = new AttoInterpreter[IO]
         implicit val discordInteraction: DiscordInteraction[IO]     = new DiscordClientInterpreter(discord.client)
         implicit val userInteractionStore: UserInteractionStore[IO] = new UserInteractionStoreInterpreter[IO]
         val eventHandler                                            = new DiscordEventHandler[IO]()

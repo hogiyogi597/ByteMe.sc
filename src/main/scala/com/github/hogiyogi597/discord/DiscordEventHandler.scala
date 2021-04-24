@@ -1,16 +1,16 @@
 package com.github.hogiyogi597.discord
 
-import cats.Monad
+import cats.{Applicative, Monad}
 import cats.syntax.all._
 import com.github.hogiyogi597.models.ParsedCommand._
 import com.github.hogiyogi597.persistence.{UserInteractionStore, UserSearchState}
 import com.github.hogiyogi597.yarn.Yarn
 import dissonance.data.{Snowflake, User}
 
-class DiscordEventHandler[F[_]: Monad: Yarn: DiscordInteraction: UserInteractionStore: MessageParser] {
+class DiscordEventHandler[F[_]: Monad: Yarn: DiscordInteraction: UserInteractionStore] {
   def parseAndHandleCommand(channelId: Snowflake, user: User, rawInputMessage: String): F[Unit] = {
     for {
-      parsedCommand <- MessageParser[F].parseMessage(rawInputMessage)
+      parsedCommand <- Applicative[F].pure(MessageParser.parseMessage(rawInputMessage))
       _ <- parsedCommand.traverse {
              case HelpCommand() => DiscordInteraction[F].sendMessage(channelId, helpMessage)
              case RandomSearchCommand() =>
