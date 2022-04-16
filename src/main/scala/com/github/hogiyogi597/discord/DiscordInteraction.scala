@@ -15,7 +15,7 @@ object DiscordInteraction {
   def apply[F[_]](implicit DiscordInteraction: DiscordInteraction[F]): DiscordInteraction[F] = DiscordInteraction
 }
 
-class DiscordClientInterpreter(discordClient: DiscordClient) extends DiscordInteraction[IO] {
+class DiscordClientInteraction(discordClient: DiscordClient) extends DiscordInteraction[IO] {
   override def sendMessage(channelId: Snowflake, message: String): IO[Unit] =
     discordClient.sendMessage(message, channelId).void
 

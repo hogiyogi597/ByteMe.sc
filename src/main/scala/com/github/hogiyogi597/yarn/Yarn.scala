@@ -1,8 +1,8 @@
 package com.github.hogiyogi597.yarn
 
-import cats.effect.Sync
+import cats.Functor
 import cats.implicits._
-import com.github.hogiyogi597.yarn.JsoupBrowserInterpreter._
+import com.github.hogiyogi597.yarn.JsoupYarnBrowser._
 import org.http4s.Uri
 
 trait Yarn[F[_]] {
@@ -15,7 +15,7 @@ object Yarn {
   def apply[F[_]](implicit Yarn: Yarn[F]): Yarn[F] = Yarn
 }
 
-class JsoupBrowserInterpreter[F[_]: Sync: YarnParser] extends Yarn[F] {
+class JsoupYarnBrowser[F[_]: Functor: YarnParser] extends Yarn[F] {
   def getPopular: F[Option[YarnResult]] =
     YarnParser[F]
       .parseDocFromUrl(popularRequestUrl)
@@ -30,7 +30,9 @@ class JsoupBrowserInterpreter[F[_]: Sync: YarnParser] extends Yarn[F] {
     YarnParser[F].parseDocFromUrl(searchTermRequestUrl(term))
 }
 
-object JsoupBrowserInterpreter {
-  protected val popularRequestUrl: Uri                  = baseYarnUrl.withPath("yarn-popular")
-  protected def searchTermRequestUrl(term: String): Uri = baseYarnUrl.withPath("yarn-find").withQueryParam("text", term)
+object JsoupYarnBrowser {
+  val yarnPopularPath                                   = "yarn-popular"
+  val yarnFindPath                                      = "yarn-find"
+  protected val popularRequestUrl: Uri                  = baseYarnUrl.withPath(yarnPopularPath)
+  protected def searchTermRequestUrl(term: String): Uri = baseYarnUrl.withPath(yarnFindPath).withQueryParam("text", term)
 }

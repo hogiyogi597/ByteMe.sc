@@ -11,7 +11,7 @@ object MessageParser {
 
   private val randomSearchParser        = simpleCommandParser.filter(_.isEmpty).map(_ => RandomSearchCommand())
   private val singleSearchParser        = simpleCommandParser.filter(_.nonEmpty).map(SingleSearchCommand)
-  private val multiSearchParser         = (botCommandParser ~ char('*') ~> token(takeText)).map(MultiSearchCommand)
+  private val multiSearchParser         = (botCommandParser ~ token(char('*')) ~> token(takeText)).map(MultiSearchCommand)
   private val completeMultiSearchParser = decimalDigit.map(_.asDigit).map(CompleteMultiSearchCommand)
   private val helpCommandParser         = (botCommandParser ~ token(stringCI("--help")) || botCommandParser ~ char('?')).map(_ => HelpCommand())
   private val cancelCommandParser       = token(string("cancel")).map(_ => CancelMultiSearchCommand())

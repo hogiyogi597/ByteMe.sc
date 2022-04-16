@@ -16,7 +16,7 @@ object UserInteractionStore {
   def apply[F[_]](implicit UserInteractionStore: UserInteractionStore[F]): UserInteractionStore[F] = UserInteractionStore
 }
 
-class UserInteractionStoreInterpreter[F[_]: FlatMap: KVS] extends UserInteractionStore[F] {
+class LiveUserInteractionStore[F[_]: FlatMap: KVS] extends UserInteractionStore[F] {
   override def getUserSearchState(id: Snowflake): F[Option[UserSearchState]] = KVS[F].get(id)
 
   override def startUserSearch(id: Snowflake, userSearchState: UserSearchState): F[Unit] = KVS[F].put(id, userSearchState)

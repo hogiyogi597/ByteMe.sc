@@ -9,8 +9,9 @@ object Dependencies {
     val slf4j        = "1.7.30"
     val http4s       = "0.21.7"
     val dissonance   = "0.0.0+363-c9a1619f-SNAPSHOT"
-    val catsEffect   = "2.2.0"
+    val catsEffect   = "2.4.1"
     val scalaScraper = "2.2.0"
+    val weaverTest   = "0.7.4"
   }
 
   object Compile {
@@ -22,17 +23,10 @@ object Dependencies {
     val dissonance   = "com.github.billzabob" %% "dissonance"    % Versions.dissonance
     val catsEffect   = "org.typelevel"        %% "cats-effect"   % Versions.catsEffect
     val scalaScraper = "net.ruippeixotog"     %% "scala-scraper" % Versions.scalaScraper
+    val weaverTest   = "com.disneystreaming"  %% "weaver-cats"   % Versions.weaverTest % Test
   }
 
   import Compile._
 
-  lazy val dependencies = Seq(
-    fs2,
-    atto,
-    slf4j,
-    http4s,
-    dissonance,
-    catsEffect,
-    scalaScraper
-  ) ++ cats
+  lazy val dependencies = Seq(fs2, atto, slf4j, http4s, dissonance, catsEffect, scalaScraper, weaverTest) ++ cats
 }
